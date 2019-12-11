@@ -1,0 +1,9 @@
+<div class="month flex-row-sm-1">
+    <div class="month__header">
+        {{ monthName }}
+    </div>
+    <pre>{{ days | json }}</pre>
+    <div class="month__summary">
+        <app-day *ngFor="let date of dates" [date]="date"></app-day>
+    </div>
+</div>

@@ -1,0 +1,11 @@
+<div class="calendar">
+    <div class="calendar__title">
+        <button (click)="toPreviousYear()">&lt;</button>
+        <span>{{ year }}</span>
+        <button (click)="toNextYear()">&gt;</button>
+    </div>
+
+    <div class="calendar__body">
+        <app-month *ngFor="let month of months; let i = index" [monthName]="month" [dates]="datesByMonth[i]"></app-month>
+    </div>
+</div>
