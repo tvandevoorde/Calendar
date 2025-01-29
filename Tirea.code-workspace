@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"name": "Angular-App",
+			"path": "angular-app"
+		},
+		{
+			"name": "PHP-App",
+			"path": "php-app"
+		},
+		{
+			"path": "mysql-scripts"
+		}
+	],
+	"settings": {}
+}
