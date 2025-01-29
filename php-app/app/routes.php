@@ -2,42 +2,23 @@
 
 declare(strict_types=1);
 
-use App\Application\Actions\User\ListUsersAction;
-use App\Application\Actions\User\ViewUserAction;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\App;
-use Slim\Interfaces\RouteCollectorProxyInterface as Group;
-use League\OAuth2\Client\Provider\Google;
 use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use GuzzleHttp\Client;
 
-
-
-function saveUserToDatabase($userData) {
-    $pdo = new PDO($_ENV['DATABASE_URL'], $_ENV['DB_USERNAME'], $_ENV['DB_PASSWORD']);
-
-    $stmt = $pdo->prepare('INSERT INTO users (google_id, email, name)
-                           VALUES (:google_id, :email, :name)
-                           ON DUPLICATE KEY UPDATE email = :email, name = :name');
-
-    $stmt->execute([
-        ':google_id' => $userData['id'],
-        ':email' => $userData['email'],
-        ':name' => $userData['name'],
+function getDB() {
+    return new PDO($_ENV['DATABASE_URL'], $_ENV['DB_USERNAME'], $_ENV['DB_PASSWORD'], [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ]);
-};
+}
 
-function validateUserData($data) {
-    if (empty($data['name']) || strlen($data['name']) > 255) {
-        throw new Exception('Invalid name: must be non-empty and less than 255 characters');
-    }
-
-    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
-        throw new Exception('Invalid email address');
-    }
-};
+function unauthorizedResponse(): Response {
+    $response = new \Slim\Psr7\Response();
+    $response->getBody()->write(json_encode(["error" => "Unauthorized"]));
+    return $response->withStatus(401)->withHeader('Content-Type', 'application/json');
+}
 
 return function (App $app) {
     $app->options('/{routes:.*}', function (Request $request, Response $response) {
@@ -93,5 +74,70 @@ return function (App $app) {
             return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
         }
     });
-}
+
+
+    // 🔹 **1. Endpoint om een profiel aan te maken**
+    $app->post('/api/user', function (Request $request, Response $response) {
+        $data = json_decode($request->getBody()->getContents(), true);
+        $db = getDB();
+
+        $stmt = $db->prepare("INSERT INTO users (google_id, email, name, avatar_url) VALUES (:google_id, :email, :name, :avatar_url)");
+        $stmt->execute([
+            'google_id' => $data['google_id'],
+            'email' => $data['email'],
+            'name' => $data['name'],
+        ]);
+
+        $response->getBody()->write(json_encode(["message" => "User created"]));
+        return $response->withHeader('Content-Type', 'application/json');
+    });
+
+    // 🔹 **2. Endpoint om een profiel op te halen (voor de ingelogde gebruiker)**
+    $app->get('/api/user', function (Request $request, Response $response) {
+        $user = $request->getAttribute('user');
+        $db = getDB();
+
+        $stmt = $db->prepare("SELECT id, google_id, email, name, avatar_url, created_at FROM users WHERE google_id = :google_id");
+        $stmt->execute(['google_id' => $user['sub']]);
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$userData) {
+            return unauthorizedResponse($response);
+        }
+
+        $response->getBody()->write(json_encode($userData));
+        return $response->withHeader('Content-Type', 'application/json');
+    })->add('authMiddleware');
+
+    // 🔹 **3. Endpoint om een profiel te updaten**
+    $app->put('/api/user', function (Request $request, Response $response) {
+        $user = $request->getAttribute('user');
+        $data = json_decode($request->getBody()->getContents(), true);
+        $db = getDB();
+
+        $stmt = $db->prepare("UPDATE users SET name = :name, avatar_url = :avatar_url WHERE google_id = :google_id");
+        $stmt->execute([
+            'name' => $data['name'],
+            'avatar_url' => $data['avatar_url'],
+            'google_id' => $user['sub']
+        ]);
+
+        $response->getBody()->write(json_encode(["message" => "User updated"]));
+        return $response->withHeader('Content-Type', 'application/json');
+    })->add('authMiddleware');
+
+    // 🔹 **4. Endpoint om een profiel te verwijderen**
+    $app->delete('/api/user', function (Request $request, Response $response) {
+        $user = $request->getAttribute('user');
+        $db = getDB();
+
+        $stmt = $db->prepare("DELETE FROM users WHERE google_id = :google_id");
+        $stmt->execute(['google_id' => $user['sub']]);
+
+        $response->getBody()->write(json_encode(["message" => "User deleted"]));
+        return $response->withHeader('Content-Type', 'application/json');
+    })->add('authMiddleware');
+
+
+};
 ?>

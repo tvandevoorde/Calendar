@@ -9,10 +9,10 @@ import { AuthGoogleService } from '../../../auth/auth-google.service';
   imports: [CommonModule, LoginButtonComponent],
   template: `
     <nav class="navbar">
-      <a class="navbar-brand" href="/">My App</a>
+      <a class="navbar-brand" href="/">TIREA</a>
       <div class="navbar-links">
         <app-login-button></app-login-button>
-        <button *ngIf="isAuthenticated" (click)="goToUserProfile()">User Profile</button>
+        <button *ngIf="isAuthenticated()" (click)="goToUserProfile()">User Profile</button>
       </div>
     </nav>
   `,
@@ -39,10 +39,17 @@ import { AuthGoogleService } from '../../../auth/auth-google.service';
     .navbar-links button:hover {
       background-color: #357ae8;
     }
+
+    .navbar-brand {
+      font-size: 1.5em;
+      font-weight: bold;
+      text-decoration: none;
+      color: white;
+    }
   `
 })
 export class NavbarComponent {
-  isAuthenticated = this.authService.profile() !== null;
+  isAuthenticated = this.authService.isAuthenticated;
   
   constructor(private authService: AuthGoogleService, private router: Router) {}
 

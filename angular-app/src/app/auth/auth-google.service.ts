@@ -67,7 +67,6 @@ export class AuthGoogleService {
     })
     .then(response => response.json())
     .then(data => {
-      console.log('Backend Response:', data);
       localStorage.setItem('authToken', data.jwt);
     });
   }

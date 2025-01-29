@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { UserProfileComponent } from "../../auth/components/user-profile/user-profile.component";
 
 @Component({
   selector: 'app-homepage',
